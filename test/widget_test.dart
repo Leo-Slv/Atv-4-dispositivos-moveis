@@ -1,30 +1,55 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:pedidos_restaurante/main.dart';
 
+Future<void> toque(WidgetTester t, String texto) async {
+  await t.tap(find.text(texto));
+  await t.pumpAndSettle();
+}
+
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('fluxo completo do pedido', (t) async {
+    await t.pumpWidget(const RootApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // R1: avancar desabilitado sem selecao
+    expect(
+      t.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Avançar')).onPressed,
+      isNull,
+    );
+    await toque(t, 'Salmão grelhado');
+    await toque(t, 'Avançar');
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await toque(t, 'Refrigerante');
+    await toque(t, 'Avançar');
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await toque(t, 'Pudim');
+    await toque(t, 'Avançar');
+
+    await toque(t, 'Pix');
+
+    // R3: voltar mantem selecao e permite alterar
+    await toque(t, 'Voltar');
+    expect(find.text('3. Sobremesa'), findsOneWidget);
+    await toque(t, 'Avançar');
+    expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+    await toque(t, 'Avançar');
+
+    expect(find.text('Total: R\$ 75,50'), findsOneWidget);
+    expect(find.text('R\$ 56,00'), findsOneWidget);
+    expect(find.text('Pagamento: Pix'), findsOneWidget);
+
+    // R4: sem voltar
+    expect(find.byType(BackButton), findsNothing);
+    await toque(t, 'Novo pedido');
+    expect(find.text('1. Prato principal'), findsOneWidget);
+    expect(find.byIcon(Icons.radio_button_checked), findsNothing);
+  });
+
+  testWidgets('voltar ao inicio', (t) async {
+    await t.pumpWidget(const RootApp());
+    await toque(t, 'Salmão grelhado');
+    await toque(t, 'Avançar');
+    await toque(t, 'Voltar ao início');
+    expect(find.text('1. Prato principal'), findsOneWidget);
   });
 }
